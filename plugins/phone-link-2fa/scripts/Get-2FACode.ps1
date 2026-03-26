@@ -9,51 +9,52 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
-# SMS package names used by Android messaging apps
-$script:SmsPackages = @(
-    'com.google.android.apps.messaging',
-    'com.android.mms',
-    'com.samsung.android.messaging',
-    'com.sec.android.app.smsreceiver'
-)
-
-function Find-PhoneLinkNotificationsDB {
+function Find-PhoneLinkDB {
     $base = "$env:LOCALAPPDATA\Packages\Microsoft.YourPhone_8wekyb3d8bbwe\LocalCache\Indexed"
     if (!(Test-Path $base)) { throw "Phone Link not found. Install from Microsoft Store and pair your phone." }
+    # Primary: phone.db contains the Messages pane SMS data (requires WAL copy)
+    $phoneDb = Get-ChildItem $base -Recurse -Filter "phone.db" -EA SilentlyContinue | Select-Object -First 1
+    if ($phoneDb) { return @{ Path = $phoneDb.FullName; Type = "phone" } }
+    # Fallback: notifications.db (some SMS may appear as notifications)
     $notifDb = Get-ChildItem $base -Recurse -Filter "notifications.db" -EA SilentlyContinue | Select-Object -First 1
-    if ($notifDb) { return $notifDb.FullName }
-    # Fallback: try legacy store.db / message.db
-    $legacy = Get-ChildItem $base -Recurse -Filter "*.db" -EA SilentlyContinue |
-        Where-Object { $_.Name -match "store|message" } | Select-Object -First 1
-    if ($legacy) { return $legacy.FullName }
-    throw "No Phone Link database found. Ensure Phone Link is paired and notifications are syncing."
+    if ($notifDb) { return @{ Path = $notifDb.FullName; Type = "notifications" } }
+    throw "No Phone Link database found. Ensure Phone Link is paired and syncing."
 }
 
-function Get-RecentSMS([string]$DbPath, [int]$Limit = 20) {
+function Copy-DBWithWAL([string]$DbPath) {
+    # SQLite WAL mode: must copy .db + .db-wal + .db-shm together for consistent reads
+    $tmp = "$env:TEMP\phonelink_2fa_$(Get-Random)"
+    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+    $dbName = [System.IO.Path]::GetFileName($DbPath)
+    $dbDir = [System.IO.Path]::GetDirectoryName($DbPath)
+    Copy-Item $DbPath "$tmp\$dbName" -Force
+    Copy-Item "$DbPath-wal" "$tmp\$dbName-wal" -Force -EA SilentlyContinue
+    Copy-Item "$DbPath-shm" "$tmp\$dbName-shm" -Force -EA SilentlyContinue
+    return "$tmp\$dbName"
+}
+
+function Get-RecentSMS([hashtable]$DbInfo, [int]$Limit = 20) {
     if (!(Get-Command sqlite3 -EA SilentlyContinue)) { throw "sqlite3 not found. Run: winget install SQLite.SQLite" }
-    $tmp = "$env:TEMP\phonelink_2fa_$(Get-Random).db"
-    Copy-Item $DbPath $tmp -Force
+    $tmp = Copy-DBWithWAL $DbInfo.Path
     $results = @()
-    # Primary: notifications.db with JSON extraction
-    $pkgFilter = ($script:SmsPackages | ForEach-Object { "'$_'" }) -join ','
-    $q = "SELECT json_extract(json, '$.text') as body, json_extract(json, '$.title') as sender, post_time FROM notifications WHERE package_name IN ($pkgFilter) ORDER BY post_time DESC LIMIT $Limit;"
-    $r = sqlite3 -separator "|" $tmp $q 2>$null
-    if ($r) {
-        Remove-Item $tmp -Force -EA SilentlyContinue
-        return $r
+    try {
+        if ($DbInfo.Type -eq "phone") {
+            # phone.db: message table with body, from_address, timestamp
+            $q = "SELECT body, from_address, timestamp FROM message ORDER BY timestamp DESC LIMIT $Limit;"
+            $results = sqlite3 -separator "|" $tmp $q 2>$null
+        }
+        if (!$results -or $results.Count -eq 0) {
+            # notifications.db fallback: SMS via Android messaging app notifications
+            $smsPackages = @('com.google.android.apps.messaging','com.android.mms','com.samsung.android.messaging')
+            $pkgFilter = ($smsPackages | ForEach-Object { "'$_'" }) -join ','
+            $q = "SELECT json_extract(json, '$.text'), json_extract(json, '$.title'), post_time FROM notifications WHERE package_name IN ($pkgFilter) ORDER BY post_time DESC LIMIT $Limit;"
+            $results = sqlite3 -separator "|" $tmp $q 2>$null
+        }
+    } finally {
+        $tmpDir = [System.IO.Path]::GetDirectoryName($tmp)
+        Remove-Item $tmpDir -Recurse -Force -EA SilentlyContinue
     }
-    # Fallback: legacy table structures
-    $legacyQueries = @(
-        "SELECT body, sender_name, timestamp FROM message ORDER BY timestamp DESC LIMIT $Limit;",
-        "SELECT body, address, date FROM sms ORDER BY date DESC LIMIT $Limit;",
-        "SELECT text_content, sender, created_time FROM messages ORDER BY created_time DESC LIMIT $Limit;"
-    )
-    foreach ($lq in $legacyQueries) {
-        $r = sqlite3 -separator "|" $tmp $lq 2>$null
-        if ($r) { Remove-Item $tmp -Force -EA SilentlyContinue; return $r }
-    }
-    Remove-Item $tmp -Force -EA SilentlyContinue
-    return @()
+    return $results
 }
 
 function Extract-2FACode([string]$Text) {
@@ -70,12 +71,12 @@ function Extract-2FACode([string]$Text) {
 }
 
 # --- Main ---
-$dbPath = Find-PhoneLinkNotificationsDB
-Write-Host ("SMS source: {0}" -f $dbPath) -ForegroundColor Cyan
+$dbInfo = Find-PhoneLinkDB
+Write-Host ("SMS source: {0} ({1})" -f $dbInfo.Path, $dbInfo.Type) -ForegroundColor Cyan
 
 if ($ListRecent) {
     Write-Host "`nRecent SMS messages:" -ForegroundColor Green
-    $msgs = Get-RecentSMS $dbPath -Limit 10
+    $msgs = Get-RecentSMS $dbInfo -Limit 10
     foreach ($m in $msgs) {
         $parts = $m -split '\|', 3
         $body = $parts[0]; $sender = if ($parts.Count -gt 1) { $parts[1] } else { "?" }
@@ -90,7 +91,7 @@ Write-Host ("Watching for 2FA (timeout:{0}s filter:{1})..." -f $TimeoutSeconds, 
 
 $start = Get-Date; $seen = @{}
 while (((Get-Date) - $start).TotalSeconds -lt $TimeoutSeconds) {
-    try { $msgs = Get-RecentSMS $dbPath } catch { Start-Sleep 3; continue }
+    try { $msgs = Get-RecentSMS $dbInfo } catch { Start-Sleep 3; continue }
     foreach ($m in $msgs) {
         $parts = $m -split '\|', 3
         $body = $parts[0]; $sender = if ($parts.Count -gt 1) { $parts[1] } else { "?" }
