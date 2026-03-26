@@ -40,6 +40,7 @@ Each plugin is a self-contained `SKILL.md` — structured markdown that any AI a
 | [🔄 restart-recovery](plugins/restart-recovery/) | Snapshot and restore full dev environment (services, sessions, state) after machine restart | `restart recovery`, `recover from restart`, `snapshot before restart` |
 | [🔄 reflect](plugins/reflect/) | Agent self-reflection and continuous improvement patterns | `reflect`, `retrospective`, `self-improve`, `lessons learned`, `what went wrong` |
 | [🔀 github-multi-account](plugins/github-multi-account/) | Solve multi-account GitHub CLI chaos with account-locked aliases | `gh auth switch`, `wrong account`, `multi account`, `EMU` |
+| [📱 phone-link-2fa](plugins/phone-link-2fa/) | Extract 2FA codes from SMS via Windows Phone Link | `2fa`, `sms`, `verification code`, `otp`, `phone link` |
 
 ---
 
