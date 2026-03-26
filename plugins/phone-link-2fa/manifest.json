@@ -1,0 +1,18 @@
+{
+  "name": "phone-link-2fa",
+  "version": "1.0.0",
+  "description": "Extract 2FA verification codes from SMS via Windows Phone Link",
+  "platforms": ["copilot", "squad", "any"],
+  "triggers": ["2fa", "sms", "verification code", "otp", "phone link", "two factor"],
+  "requires": {
+    "os": "windows",
+    "capabilities": ["sms"],
+    "tools": ["sqlite3"]
+  },
+  "author": "Tamir Dresher",
+  "license": "MIT",
+  "files": {
+    "skill": "SKILL.md",
+    "scripts": ["scripts/Get-2FACode.ps1"]
+  }
+}
