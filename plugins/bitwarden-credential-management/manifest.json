@@ -1,0 +1,12 @@
+{
+  "name": "bitwarden-credential-management",
+  "version": "1.0.0",
+  "description": "Bitwarden MCP + CLI integration for AI agent credential management",
+  "platforms": ["copilot", "claude", "squad", "any"],
+  "triggers": ["bitwarden", "vault", "credential", "password manager", "mcp bitwarden", "bw cli", "agent credentials"],
+  "author": "Tamir Dresher",
+  "license": "MIT",
+  "files": {
+    "skill": "SKILL.md"
+  }
+}

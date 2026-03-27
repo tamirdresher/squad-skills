@@ -1,7 +1,7 @@
 # 🧩 Squad Skills — AI Plugin Marketplace
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Plugins](https://img.shields.io/badge/Plugins-10-green.svg)](#-available-plugins)
+[![Plugins](https://img.shields.io/badge/Plugins-22-green.svg)](#-available-plugins)
 [![Platform](https://img.shields.io/badge/Works%20With-Any%20AI%20Agent-purple.svg)](#-installation)
 
 **Reusable knowledge plugins for AI agents.** Think of it as *npm for AI agent skills* — structured knowledge modules that any AI system can consume to learn new capabilities.
@@ -29,6 +29,7 @@ Each plugin is a self-contained `SKILL.md` — structured markdown that any AI a
 | Plugin | Description | Triggers |
 |--------|-------------|----------|
 | [🖥️ teams-ui-automation](plugins/teams-ui-automation/) | Hybrid Teams automation — Playwright + keyboard shortcuts + UIA | `teams ui`, `install teams app`, `teams automation` |
+| [🔐 bitwarden-credential-management](plugins/bitwarden-credential-management/) | Bitwarden MCP + CLI integration for secure AI agent credential management | `bitwarden`, `vault`, `credential`, `password manager` |
 | [📡 teams-monitor](plugins/teams-monitor/) | Monitor Teams channels via WorkIQ and bridge messages to GitHub issues | `check teams`, `teams monitor` |
 | [🔄 cross-machine-coordination](plugins/cross-machine-coordination/) | Git-based task queuing for multi-machine agent coordination | `cross machine`, `remote task`, `distribute work` |
 | [📋 github-project-board](plugins/github-project-board/) | GitHub Projects V2 board sync with issue lifecycle | `project board`, `move issue`, `board status` |
