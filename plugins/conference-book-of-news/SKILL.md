@@ -1,7 +1,7 @@
 ---
 name: conference-book-of-news
 description: Automatically create a comprehensive "Book of News" PDF from any conference — scrapes sessions, captures video screenshots, extracts slide content via OCR, generates AI summaries, and produces an Ignite-style publication with images, announcements, code samples, and indexes.
-confidence: medium
+confidence: high
 ---
 
 # Conference Book of News
@@ -269,15 +269,17 @@ Each session gets a detailed page with:
 - Session abstract from catalog (italic, gray text)
 
 **Hero Image:**
-- First screenshot, full-width (1400px)
-- JPEG quality 85 (sharp enough to read slides when zoomed)
+- First screenshot, full-width (1400px max)
+- Smart-cropped to remove meeting platform UI (see Lesson #7)
+- JPEG quality 96 with 4:4:4 chroma (`subsampling=0`) for sharp text
 - Embedded as base64 data URI
 
 **Screenshot Grid:**
 - Remaining 6 screenshots in 3-column layout
-- Each image: 700px wide
+- Each image: 1000px wide (not 700px — smaller is unreadable)
+- Smart-cropped (same as hero)
 - Caption below each: OCR-extracted slide heading + timestamp
-  - Example: *"Azure AI Studio Overview (12m45s)"*
+  - Example: *"Azure AI Studio Overview — at 12:45"*
 
 **Topics Covered:**
 - Extracted from OCR slide headings (h2, h3 text)
@@ -304,9 +306,11 @@ Each session gets a detailed page with:
 - Caption: "Code sample from {timestamp}"
 
 **Links Shared:**
-- URLs extracted from OCR text
-- Regex: `https?://[^\s]+`
-- Displayed as clickable links
+- URLs extracted from OCR text AND AI summaries
+- Regex: `https?://[^\s<>"')\]]+`
+- Filter out noise URLs: localhost, 127.0.0.1, privacy/cookie links, the video player URL itself
+- Displayed as clickable links in a green-bordered section
+- Typically 10-20% of sessions have extractable links
 
 **Key Takeaways:**
 - Bullet list from AI summary
@@ -333,29 +337,92 @@ Each session gets a detailed page with:
 
 #### **Technical Implementation:**
 
-**Image embedding:**
+**Smart Crop (critical for meeting recordings):**
 ```python
-# Convert PNG → JPEG, embed as base64
+def smart_crop(img):
+    """Remove meeting platform UI chrome from screenshots."""
+    w, h = img.size
+    
+    # 1. Black bars: scan for first/last bright rows
+    top = 0
+    for y in range(0, h // 3, 3):
+        bright = sum(1 for x in range(0, w, w//10) 
+                     if sum(img.getpixel((x, y))[:3])/3 > 25)
+        if bright >= 3:
+            top = y; break
+    
+    bottom = h
+    for y in range(h - 1, h * 2 // 3, -3):
+        bright = sum(1 for x in range(0, w, w//10) 
+                     if sum(img.getpixel((x, y))[:3])/3 > 25)
+        if bright >= 3:
+            bottom = y + 1; break
+    
+    # 2. Controls bar: bright row in top 80px of content
+    controls_end = top
+    for y in range(top, min(top + 80, h), 2):
+        row_bright = sum(1 for x in range(0, w, w//20) 
+                        if sum(img.getpixel((x, y))[:3])/3 > 100)
+        if row_bright >= w // 20 // 2:
+            controls_end = y + 2
+    if controls_end > top:
+        top = controls_end + 5
+    
+    # 3. Gallery border: thin bright strip with dark area to its left
+    right = w
+    sample_ys = list(range(top + 50, bottom - 50, 30))
+    for x_check in range(int(w * 0.9), int(w * 0.6), -2):
+        hits = 0
+        for y_s in sample_ys:
+            b = sum(img.getpixel((x_check, y_s))[:3]) / 3
+            b_left = sum(img.getpixel((max(0, x_check - 30), y_s))[:3]) / 3
+            if 40 < b < 120 and b_left < 40 and b > b_left + 15:
+                hits += 1
+        if hits >= len(sample_ys) * 0.6:
+            right = x_check - 5; break
+    
+    # 4. Bottom nav: trim 25px
+    bottom = max(top + 100, bottom - 25)
+    
+    # Safety: don't over-crop
+    if (right < w * 0.5) or (bottom - top < h * 0.3):
+        return (0, 0, w, h)
+    return (0, top, right, bottom)
+```
+
+**Image embedding with HD quality:**
+```python
 from PIL import Image
 import base64
 from io import BytesIO
 
-img = Image.open(screenshot_path).convert('RGB')
-buffer = BytesIO()
-img.save(buffer, format='JPEG', quality=85)
-b64 = base64.b64encode(buffer.getvalue()).decode()
-html_img = f'<img src="data:image/jpeg;base64,{b64}" alt="...">'
+def encode_image(filepath, max_width=1400):
+    img = Image.open(filepath)
+    crop_box = smart_crop(img)
+    if crop_box != (0, 0, img.width, img.height):
+        img = img.crop(crop_box)
+    if img.width > max_width:
+        ratio = max_width / img.width
+        img = img.resize((max_width, int(img.height * ratio)), Image.LANCZOS)
+    buf = BytesIO()
+    # quality=96 + subsampling=0 (4:4:4) = HD text readability
+    img.convert('RGB').save(buf, format='JPEG', quality=96, 
+                            subsampling=0, optimize=True)
+    return base64.b64encode(buf.getvalue()).decode()
 ```
 
 **Why base64?**
 - Self-contained HTML (no external file dependencies)
 - Required for PDF conversion (Playwright needs all resources inline)
-- Downside: Large HTML file (50-100MB), but acceptable for ephemeral build artifact
+- Downside: Large HTML file (100-160MB for HD), but acceptable for ephemeral build artifact
 
 **Image quality tradeoffs:**
-- Quality 62: Small file, but text blurry when zoomed
-- Quality 85: Sharp text, readable at 200% zoom, ~2-3x larger
-- **Recommendation**: Use 85 for publication-quality output
+| Quality | Subsampling | Result | Use Case |
+|---------|-------------|--------|----------|
+| 62 | 4:2:0 (default) | Blurry text, small file | Never — too low |
+| 85 | 4:2:0 (default) | OK text, moderate file | Quick drafts only |
+| 96 | 4:4:4 (subsampling=0) | **Sharp text, HD quality** | **Publication output** |
+| PNG | N/A | Lossless, 5x larger | Too large for 100+ sessions |
 
 **Product name extraction:**
 ```python
@@ -631,30 +698,47 @@ Real lessons from the MVP Summit 2026 implementation:
 - **Solution:** Use known-product dictionary (Azure, Copilot, etc.) + qualifier matching
 - **Example:** "new Azure AI Studio" (good), "John Azure" (filtered as likely person name)
 
-### **6. JPEG quality 62 is too low to read slide text when zoomed**
-- **Problem:** At quality 62, slide text becomes blurry at 150-200% zoom
-- **Solution:** Use quality 85 (sweet spot: sharp text, reasonable file size)
-- **File size impact:** Quality 62 = 150KB/image, Quality 85 = 400KB/image (2.7x larger)
-- **Tradeoff:** For 200 sessions × 7 images = 1400 images, delta is ~350MB vs ~1GB
+### **6. JPEG quality AND chroma subsampling are critical for text readability**
+- **Problem:** Default PIL JPEG quality (75) and chroma subsampling (4:2:0) make slide text blurry when zoomed
+- **Solution:** Use `quality=96, subsampling=0` (4:4:4 chroma — no color channel downsampling)
+- **Why subsampling=0 matters:** Default JPEG uses 4:2:0 which halves color resolution. Text edges use color contrast, so 4:2:0 blurs text. `subsampling=0` (4:4:4) preserves full color resolution — critical for reading slide text
+- **File size impact:** Quality 85 + 4:2:0 = ~400KB/image; Quality 96 + 4:4:4 = ~1.2MB/image (3x larger but readable)
+- **Grid images:** Use max_width=1000px (not 700px) for the 3-column grid
+- **Hero images:** max_width=1400px (full width, no downscale if source is smaller)
+- **Code gallery:** max_width=1400px (users need to read code in screenshots)
+- **PIL code:** `img.save(buf, format='JPEG', quality=96, subsampling=0, optimize=True)`
 
-### **7. base64 images make HTML huge (50+MB) but needed for self-contained PDF**
-- **Problem:** HTML file size becomes 50-100MB with embedded images
+### **7. Smart Crop — removing meeting platform UI chrome is essential**
+- **Problem:** Video screenshots of recorded sessions include the meeting platform UI: controls bar, participant gallery sidebar, black letterbox bars, slide navigation bar. These waste 40-50% of the image and obscure the actual slide content.
+- **Solution:** Implement a `smart_crop()` function that detects and removes each UI element:
+  1. **Black bars (top/bottom):** Scan rows for brightness — first/last rows with ≥3 bright sample points mark content boundaries
+  2. **Controls bar:** Scan first 80px of content for a fully bright row (meeting controls). Trim past it (+5px).
+  3. **Participant gallery border:** Scan x from 90%→60% of width. At each x, sample y positions across the content area. Gallery border has brightness 40-120 while 30px to its left is <40 with >15 brightness difference. If 60%+ of y-samples match, crop at that x.
+  4. **Bottom nav bar:** Trim 25px from bottom (slide navigation controls)
+- **Safety:** If crop would remove >50% of width or >70% of height, bail out (return original dimensions)
+- **Results:** Teams meetings: 1241×1280 → 1079×673 (with gallery) or 1241×673 (without). ~47% of pixels removed.
+- **Impact:** Images become dramatically more readable because the actual slide fills the frame
+- **Platform-specific:** The exact pixel patterns vary by platform (Teams, Zoom, WebEx). Test calibration screenshots first.
+
+### **8. base64 images make HTML huge (100+MB) but needed for self-contained PDF**
+- **Problem:** HTML file size becomes 100-160MB with HD embedded images
 - **Solution:** Acceptable for ephemeral build artifact; clean up after PDF generation
 - **Alternative:** Use external image files, but requires bundling for distribution
 - **Why base64:** Playwright PDF conversion needs all resources inline (no external URLs)
+- **Load timeout:** For large HTML (100+ MB), increase Playwright goto timeout to 300s: `page.goto(url, { timeout: 300000 })`
 
-### **8. "Code samples" from OCR are mostly garbage**
+### **9. "Code samples" from OCR are mostly garbage**
 - **Problem:** OCR on code screenshots produces mangled syntax, wrong indentation
 - **Solution:** Show actual screenshots of code slides instead of OCR text
 - **Detection:** Score OCR for code patterns (`{}`, `=>`, `function`, `import`) → if high score, show image
 - **Result:** Users can zoom into image to read actual code, not OCR approximation
 
-### **9. Session discovery pagination is fragile**
+### **10. Session discovery pagination is fragile**
 - **Problem:** Conference sites use infinite scroll, virtual scrolling, or complex pagination
 - **Solution:** Use `playwright-cli scroll` to trigger lazy loading, or find "Load More" button
 - **Alternative:** If site has API, scrape JSON directly (check Network tab)
 
-### **10. Authentication state expires during long scraping sessions**
+### **11. Authentication state expires during long scraping sessions**
 - **Problem:** After 1-2 hours of scraping, auth cookies expire and video pages return 401
 - **Solution:** Refresh auth token periodically (every 30 mins), or re-login
 - **Best practice:** Use dedicated service account with long-lived tokens for automation
@@ -681,7 +765,11 @@ Use this checklist to verify the generated Book of News meets quality standards:
 - [ ] Key Takeaways are actionable bullet points (5-8 items)
 
 ### **Images:**
-- [ ] JPEG quality 85 (sharp text when zoomed to 200%)
+- [ ] Smart-cropped: no meeting UI chrome (controls bar, participant gallery, black bars)
+- [ ] JPEG quality 96 with `subsampling=0` (4:4:4 chroma for sharp text)
+- [ ] Hero images at 1400px max width
+- [ ] Grid images at 1000px max width
+- [ ] Code gallery images at 1400px max width
 - [ ] No black frames or loading spinners
 - [ ] No duplicates (same timestamp captured twice)
 - [ ] Filenames follow convention: `{index}-{title-slug}-{MMmSSs}.png`
@@ -708,8 +796,9 @@ Use this checklist to verify the generated Book of News meets quality standards:
 - [ ] Speaker Directory links to their sessions
 
 ### **PDF Output:**
-- [ ] File size is reasonable (50-200MB for 100-200 sessions)
+- [ ] File size is reasonable (80-200MB for 100-200 sessions with HD images)
 - [ ] All images render correctly (no broken images)
+- [ ] Large HTML (100+ MB) loaded with extended timeout (300s)
 - [ ] Links are clickable in PDF viewer
 - [ ] Text is selectable (not rasterized)
 - [ ] Page breaks are clean (no orphaned headings)
