@@ -103,6 +103,15 @@ agent.add_context(skill_knowledge)
 
 ---
 
+## 📖 Documentation
+
+New to Squad Skills? These guides will get you up and running:
+
+- **[Getting Started Guide](docs/getting-started.md)** — New here? Walk through picking, installing, and using your first plugin in under 5 minutes.
+- **[Plugin Selection Guide](docs/plugin-selection-guide.md)** — Not sure which plugin you need? Browse the categorized matrix with complexity ratings and platform info.
+
+---
+
 ## 📁 Plugin Structure
 
 Each plugin follows a consistent structure:
