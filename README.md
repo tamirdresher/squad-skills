@@ -42,6 +42,7 @@ Each plugin is a self-contained `SKILL.md` — structured markdown that any AI a
 | [🔄 reflect](plugins/reflect/) | Agent self-reflection and continuous improvement patterns | `reflect`, `retrospective`, `self-improve`, `lessons learned`, `what went wrong` |
 | [🔀 github-multi-account](plugins/github-multi-account/) | Solve multi-account GitHub CLI chaos with account-locked aliases | `gh auth switch`, `wrong account`, `multi account`, `EMU` |
 | [📱 phone-link-2fa](plugins/phone-link-2fa/) | Extract 2FA codes from SMS via Windows Phone Link | `2fa`, `sms`, `verification code`, `otp`, `phone link` |
+| [📘 conference-book-of-news](plugins/conference-book-of-news/) | Auto-generate Ignite-style "Book of News" PDF from any conference — scrapes videos, captures screenshots, OCR extracts slides, AI summarizes sessions | `conference`, `book of news`, `session recap`, `ignite`, `build`, `summit`, `video screenshots` |
 
 ---
 
