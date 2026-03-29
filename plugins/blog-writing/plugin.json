@@ -1,0 +1,17 @@
+{
+  "name": "blog-writing",
+  "description": "Blog post quality patterns for technical writing — storytelling structure, code block rules, series conventions, and pre-publish checklists",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "blog",
+    "writing",
+    "technical writing",
+    "content",
+    "publishing"
+  ],
+  "skills": "./"
+}

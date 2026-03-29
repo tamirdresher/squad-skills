@@ -1,0 +1,19 @@
+{
+  "name": "outlook-automation",
+  "description": "Control Microsoft Outlook on Windows via COM automation — create meetings, send emails, search inbox, manage calendar",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "create meeting",
+    "send email",
+    "search emails",
+    "check inbox",
+    "calendar",
+    "schedule",
+    "outlook"
+  ],
+  "skills": "./"
+}

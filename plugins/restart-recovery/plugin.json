@@ -1,0 +1,16 @@
+{
+  "name": "restart-recovery",
+  "description": "Snapshot and restore full dev environment after machine restart",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "restart recovery",
+    "snapshot",
+    "recover after restart",
+    "dev environment"
+  ],
+  "skills": "./"
+}

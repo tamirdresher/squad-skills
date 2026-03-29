@@ -1,0 +1,17 @@
+{
+  "name": "news-broadcasting",
+  "description": "Tech news scanning, compilation, and delivery to team channels",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "news",
+    "tech news",
+    "daily briefing",
+    "news report",
+    "scan news"
+  ],
+  "skills": "./"
+}

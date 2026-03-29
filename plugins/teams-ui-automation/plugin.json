@@ -1,0 +1,17 @@
+{
+  "name": "teams-ui-automation",
+  "description": "Hybrid Teams automation via Playwright + keyboard shortcuts + UIA for operations not available through Graph API",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "teams ui",
+    "install teams app",
+    "teams connector",
+    "teams automation",
+    "ui automation"
+  ],
+  "skills": "./"
+}

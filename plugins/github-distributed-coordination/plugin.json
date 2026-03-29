@@ -1,0 +1,17 @@
+{
+  "name": "github-distributed-coordination",
+  "description": "GitHub-native distributed work claiming protocol for multi-machine agents using atomic comments and labels",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "distributed coordination",
+    "work claiming",
+    "lease management",
+    "distributed lock",
+    "agent coordination"
+  ],
+  "skills": "./"
+}

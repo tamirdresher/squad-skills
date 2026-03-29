@@ -1,0 +1,145 @@
+{
+  "name": "squad-skills",
+  "owner": {
+    "name": "Tamir Dresher",
+    "email": "tamirdresher@users.noreply.github.com"
+  },
+  "metadata": {
+    "description": "Reusable knowledge plugins for AI agents — npm for AI agent skills",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "bitwarden-credential-management",
+      "description": "Bitwarden MCP + CLI integration for AI agent credential management",
+      "version": "1.0.0",
+      "source": "./plugins/bitwarden-credential-management"
+    },
+    {
+      "name": "blog-writing",
+      "description": "Blog post quality patterns for technical writing — storytelling structure, code block rules, series conventions, and pre-publish checklists",
+      "version": "1.0.0",
+      "source": "./plugins/blog-writing"
+    },
+    {
+      "name": "chrome-devtools-mcp",
+      "description": "Chrome DevTools MCP server for AI agents — remote debugging, browser inspection, and DevTools access",
+      "version": "1.0.0",
+      "source": "./plugins/chrome-devtools-mcp"
+    },
+    {
+      "name": "conference-book-of-news",
+      "description": "Auto-generate Ignite-style Book of News PDF from any conference with AI summaries and OCR",
+      "version": "1.0.0",
+      "source": "./plugins/conference-book-of-news"
+    },
+    {
+      "name": "cross-machine-coordination",
+      "description": "Git-based task queuing for multi-machine agent coordination with schema validation and sandboxed execution",
+      "version": "1.0.0",
+      "source": "./plugins/cross-machine-coordination"
+    },
+    {
+      "name": "fact-checking",
+      "description": "Agent fact-verification patterns for ensuring accuracy before publishing",
+      "version": "1.0.0",
+      "source": "./plugins/fact-checking"
+    },
+    {
+      "name": "gh-auth-isolation",
+      "description": "Prevent multiple Squad instances from fighting over global gh auth state across repos with different GitHub accounts",
+      "version": "1.0.0",
+      "source": "./plugins/gh-auth-isolation"
+    },
+    {
+      "name": "github-distributed-coordination",
+      "description": "GitHub-native distributed work claiming protocol for multi-machine agents using atomic comments and labels",
+      "version": "1.0.0",
+      "source": "./plugins/github-distributed-coordination"
+    },
+    {
+      "name": "github-multi-account",
+      "description": "Transparent gh CLI proxy that auto-routes commands to the correct GitHub account based on repo context",
+      "version": "1.0.0",
+      "source": "./plugins/github-multi-account"
+    },
+    {
+      "name": "github-project-board",
+      "description": "Manage GitHub Projects V2 board state synchronization with issue lifecycle transitions",
+      "version": "1.0.0",
+      "source": "./plugins/github-project-board"
+    },
+    {
+      "name": "incident-response",
+      "description": "On-call incident triage patterns — Azure Status checks, incident correlation, and systematic response procedures",
+      "version": "1.0.0",
+      "source": "./plugins/incident-response"
+    },
+    {
+      "name": "mail-mcp",
+      "description": "Mail MCP server integration for enhanced email capabilities in AI agents",
+      "version": "1.0.0",
+      "source": "./plugins/mail-mcp"
+    },
+    {
+      "name": "news-broadcasting",
+      "description": "Tech news scanning, compilation, and delivery to team channels",
+      "version": "1.0.0",
+      "source": "./plugins/news-broadcasting"
+    },
+    {
+      "name": "outlook-automation",
+      "description": "Control Microsoft Outlook on Windows via COM automation — create meetings, send emails, search inbox, manage calendar",
+      "version": "1.0.0",
+      "source": "./plugins/outlook-automation"
+    },
+    {
+      "name": "phone-link-2fa",
+      "description": "Extract 2FA verification codes from SMS via Windows Phone Link",
+      "version": "1.0.0",
+      "source": "./plugins/phone-link-2fa"
+    },
+    {
+      "name": "reflect",
+      "description": "Agent self-reflection and continuous improvement patterns",
+      "version": "1.0.0",
+      "source": "./plugins/reflect"
+    },
+    {
+      "name": "restart-recovery",
+      "description": "Snapshot and restore full dev environment after machine restart",
+      "version": "1.0.0",
+      "source": "./plugins/restart-recovery"
+    },
+    {
+      "name": "secrets-management",
+      "description": "Centralized secrets management pattern for Squad — secrets never in git, always accessible at runtime",
+      "version": "1.0.0",
+      "source": "./plugins/secrets-management"
+    },
+    {
+      "name": "session-recovery",
+      "description": "Find and resume recently closed Copilot CLI sessions by topic, working directory, or time range",
+      "version": "1.0.0",
+      "source": "./plugins/session-recovery"
+    },
+    {
+      "name": "squad-email-headless",
+      "description": "Send emails headlessly via Microsoft Graph API — no browser needed after one-time setup",
+      "version": "1.0.0",
+      "source": "./plugins/squad-email-headless"
+    },
+    {
+      "name": "teams-monitor",
+      "description": "Monitor Microsoft Teams channels via WorkIQ for actionable messages and bridge them into GitHub issues",
+      "version": "1.0.0",
+      "source": "./plugins/teams-monitor"
+    },
+    {
+      "name": "teams-ui-automation",
+      "description": "Hybrid Teams automation via Playwright + keyboard shortcuts + UIA for operations not available through Graph API",
+      "version": "1.0.0",
+      "source": "./plugins/teams-ui-automation"
+    }
+  ]
+}

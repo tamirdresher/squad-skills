@@ -1,0 +1,16 @@
+{
+  "name": "reflect",
+  "description": "Agent self-reflection and continuous improvement patterns",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "reflect",
+    "retrospective",
+    "self-improve",
+    "lessons learned"
+  ],
+  "skills": "./"
+}

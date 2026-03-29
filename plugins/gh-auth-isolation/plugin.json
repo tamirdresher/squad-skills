@@ -1,0 +1,17 @@
+{
+  "name": "gh-auth-isolation",
+  "description": "Prevent multiple Squad instances from fighting over global gh auth state across repos with different GitHub accounts",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "gh auth",
+    "isolation",
+    "multi-repo",
+    "auth switch",
+    "EMU"
+  ],
+  "skills": "./"
+}

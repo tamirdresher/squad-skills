@@ -1,0 +1,17 @@
+{
+  "name": "mail-mcp",
+  "description": "Mail MCP server integration for enhanced email capabilities in AI agents",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mail",
+    "email",
+    "mcp",
+    "graph api",
+    "outlook"
+  ],
+  "skills": "./"
+}

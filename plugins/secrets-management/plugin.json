@@ -1,0 +1,17 @@
+{
+  "name": "secrets-management",
+  "description": "Centralized secrets management pattern for Squad — secrets never in git, always accessible at runtime",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "secrets",
+    "credentials",
+    "vault",
+    "secret management",
+    "runtime secrets"
+  ],
+  "skills": "./"
+}

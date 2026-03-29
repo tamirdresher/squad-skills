@@ -1,0 +1,16 @@
+{
+  "name": "fact-checking",
+  "description": "Agent fact-verification patterns for ensuring accuracy before publishing",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "fact check",
+    "verify",
+    "validate claims",
+    "source check"
+  ],
+  "skills": "./"
+}

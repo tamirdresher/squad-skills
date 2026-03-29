@@ -1,0 +1,18 @@
+{
+  "name": "phone-link-2fa",
+  "description": "Extract 2FA verification codes from SMS via Windows Phone Link",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "2fa",
+    "sms",
+    "verification code",
+    "otp",
+    "phone link",
+    "two factor"
+  ],
+  "skills": "./"
+}

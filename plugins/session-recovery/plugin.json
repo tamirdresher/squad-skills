@@ -1,0 +1,17 @@
+{
+  "name": "session-recovery",
+  "description": "Find and resume recently closed Copilot CLI sessions by topic, working directory, or time range",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "recover session",
+    "find session",
+    "resume session",
+    "lost session",
+    "recent sessions"
+  ],
+  "skills": "./"
+}

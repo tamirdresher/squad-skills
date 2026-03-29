@@ -1,0 +1,16 @@
+{
+  "name": "teams-monitor",
+  "description": "Monitor Microsoft Teams channels via WorkIQ for actionable messages and bridge them into GitHub issues",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "check teams",
+    "teams monitor",
+    "teams messages",
+    "bridge teams to github"
+  ],
+  "skills": "./"
+}

@@ -1,0 +1,18 @@
+{
+  "name": "github-multi-account",
+  "description": "Transparent gh CLI proxy that auto-routes commands to the correct GitHub account based on repo context",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "gh auth switch",
+    "multi account",
+    "EMU",
+    "personal account",
+    "github account",
+    "gh proxy"
+  ],
+  "skills": "./"
+}

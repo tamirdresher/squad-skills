@@ -1,0 +1,17 @@
+{
+  "name": "incident-response",
+  "description": "On-call incident triage patterns — Azure Status checks, incident correlation, and systematic response procedures",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "incident",
+    "on-call",
+    "triage",
+    "azure status",
+    "incident response"
+  ],
+  "skills": "./"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "squad-email-headless",
+  "description": "Send emails headlessly via Microsoft Graph API — no browser needed after one-time setup",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "email",
+    "headless",
+    "graph api",
+    "send email",
+    "squad email"
+  ],
+  "skills": "./"
+}
