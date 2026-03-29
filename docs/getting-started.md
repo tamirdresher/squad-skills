@@ -54,33 +54,33 @@ Installation depends on your AI platform. Pick your platform below:
 
 ### GitHub Copilot CLI
 
-Copy the `SKILL.md` into your repository's Copilot instructions:
+Skills go in `.copilot/skills/<skill-name>/SKILL.md` in your repo. Copilot CLI auto-discovers skills from this path — no extra configuration needed.
 
 ```bash
-# Option A: Append to repo-level instructions
-mkdir -p .github
-cat plugins/conference-book-of-news/SKILL.md >> .github/copilot-instructions.md
+# Create the skills directory and copy the SKILL.md
+mkdir -p .copilot/skills/conference-book-of-news
+cp plugins/conference-book-of-news/SKILL.md .copilot/skills/conference-book-of-news/SKILL.md
 ```
 
-Or reference it as a custom agent:
+The `SKILL.md` file must have YAML frontmatter with at least `name` and `description`:
 
-```bash
-# Option B: Create a dedicated Copilot agent
-mkdir -p .github/copilot-agents
-cp plugins/conference-book-of-news/SKILL.md .github/copilot-agents/conference-news.md
+```yaml
+---
+name: conference-book-of-news
+description: Auto-generate Book of News PDF from conference videos
+---
 ```
 
 Once added, the Copilot CLI will use the skill automatically when you mention relevant triggers (e.g., `"generate a book of news for Build 2025"`).
 
 ### VS Code — GitHub Copilot Chat
 
-1. Copy `SKILL.md` into your workspace under `.github/copilot-instructions.md` (append) or `.github/copilot-agents/<name>.md`
-2. Open Copilot Chat in VS Code
-3. The skill knowledge is now available — just ask Copilot to perform the task described in the plugin
+Same path works — `.copilot/skills/<skill-name>/SKILL.md`. You can verify skills are loaded by typing `/skills` in Copilot Chat.
 
 ```bash
 # Quick setup from terminal
-cp plugins/conference-book-of-news/SKILL.md .github/copilot-agents/conference-news.md
+mkdir -p .copilot/skills/conference-book-of-news
+cp plugins/conference-book-of-news/SKILL.md .copilot/skills/conference-book-of-news/SKILL.md
 ```
 
 ### Claude (Projects)

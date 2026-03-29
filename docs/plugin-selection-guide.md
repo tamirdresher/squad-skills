@@ -90,7 +90,6 @@ Plugins for tuning agent behavior and integrating developer tools.
 
 | Plugin | Description | Complexity | Platform | Key Dependencies |
 |--------|-------------|:----------:|----------|-----------------|
-| [agency-optimal-config](../plugins/agency-optimal-config/) | Optimal configuration reference for Agency Copilot instances | 🟡 Medium | Any | Agency CLI |
 | [chrome-devtools-mcp](../plugins/chrome-devtools-mcp/) | Chrome DevTools MCP server for remote debugging and browser inspection | 🟡 Medium | Any | Chrome, DevTools MCP server |
 
 ---
@@ -99,7 +98,6 @@ Plugins for tuning agent behavior and integrating developer tools.
 
 | Plugin | Category | Complexity | Platform |
 |--------|----------|:----------:|----------|
-| [agency-optimal-config](../plugins/agency-optimal-config/) | ⚙️ Agent Config | 🟡 Medium | Any |
 | [bitwarden-credential-management](../plugins/bitwarden-credential-management/) | 🔐 Security | 🟡 Medium | Any |
 | [blog-writing](../plugins/blog-writing/) | 📝 Content | 🟢 Easy | Any |
 | [chrome-devtools-mcp](../plugins/chrome-devtools-mcp/) | ⚙️ Agent Config | 🟡 Medium | Any |

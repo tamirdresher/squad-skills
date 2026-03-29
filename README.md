@@ -50,16 +50,14 @@ Each plugin is a self-contained `SKILL.md` — structured markdown that any AI a
 
 Every plugin's core is a single file: **`SKILL.md`**. How you feed it to your AI agent depends on the platform.
 
-### GitHub Copilot
+### GitHub Copilot (CLI & VS Code)
 
-Copy the `SKILL.md` content into your repo's Copilot instructions:
+Skills go in `.copilot/skills/<skill-name>/SKILL.md` in your repo. Copilot auto-discovers skills from this path.
 
 ```bash
-# Option A: Add to repository-level instructions
-cat plugins/teams-ui-automation/SKILL.md >> .github/copilot-instructions.md
-
-# Option B: Create a custom Copilot agent (Copilot Chat)
-# Copy SKILL.md content into a .github/copilot-agents/teams-automation.md file
+# Create the skills directory and copy the SKILL.md
+mkdir -p .copilot/skills/teams-ui-automation
+cp plugins/teams-ui-automation/SKILL.md .copilot/skills/teams-ui-automation/SKILL.md
 ```
 
 ### Claude Projects
