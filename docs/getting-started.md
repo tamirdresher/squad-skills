@@ -15,12 +15,9 @@ Let's get a plugin working in under 5 minutes. We'll use **conference-book-of-ne
 ### Step 1 — Browse the plugins
 
 ```bash
-# Clone or browse the repo
-git clone https://github.com/tamirdresher/squad-skills.git
-cd squad-skills
-
-# List all available plugins
-ls plugins/
+# Browse available plugins via the CLI
+copilot plugin marketplace add tamirdresher/squad-skills   # one-time setup
+copilot plugin marketplace browse squad-skills
 ```
 
 Or just [browse the plugins on GitHub](https://github.com/tamirdresher/squad-skills/tree/main/plugins).
@@ -32,7 +29,7 @@ Every plugin lives in `plugins/<plugin-name>/` and contains:
 | File | Purpose |
 |------|---------|
 | `SKILL.md` | 🤖 The core — agent-consumable knowledge |
-| `manifest.json` | 📋 Machine-readable metadata |
+| `manifest.json` | 📋 Machine-readable metadata (plugin manifest) |
 | `README.md` | 📖 Human-readable documentation |
 | `scripts/` | 🔧 Optional supporting scripts |
 
@@ -46,42 +43,57 @@ You'll see YAML frontmatter (triggers, confidence, description) followed by stru
 
 ### Step 3 — Install the plugin
 
-Installation depends on your AI platform. Pick your platform below:
-
----
-
-## 📦 Platform Installation Guide
-
-### GitHub Copilot CLI
-
-Skills go in `.copilot/skills/<skill-name>/SKILL.md` in your repo. Copilot CLI auto-discovers skills from this path — no extra configuration needed.
+The fastest way to install a plugin is with the **Copilot CLI plugin system**:
 
 ```bash
-# Create the skills directory and copy the SKILL.md
-mkdir -p .copilot/skills/conference-book-of-news
-cp plugins/conference-book-of-news/SKILL.md .copilot/skills/conference-book-of-news/SKILL.md
+# Option A: Install from the registered marketplace
+copilot plugin marketplace add tamirdresher/squad-skills   # one-time registration
+copilot plugin install conference-book-of-news@squad-skills
+
+# Option B: Install directly from the repo (no marketplace registration needed)
+copilot plugin install tamirdresher/squad-skills:plugins/conference-book-of-news
 ```
 
-The `SKILL.md` file must have YAML frontmatter with at least `name` and `description`:
+That's it. The plugin is now installed to `~/.copilot/state/installed-plugins/` and Copilot CLI will use it automatically when you mention relevant triggers.
 
-```yaml
----
-name: conference-book-of-news
-description: Auto-generate Book of News PDF from conference videos
----
-```
-
-Once added, the Copilot CLI will use the skill automatically when you mention relevant triggers (e.g., `"generate a book of news for Build 2025"`).
-
-### VS Code — GitHub Copilot Chat
-
-Same path works — `.copilot/skills/<skill-name>/SKILL.md`. You can verify skills are loaded by typing `/skills` in Copilot Chat.
+**Manage your plugins:**
 
 ```bash
-# Quick setup from terminal
-mkdir -p .copilot/skills/conference-book-of-news
-cp plugins/conference-book-of-news/SKILL.md .copilot/skills/conference-book-of-news/SKILL.md
+copilot plugin list                    # View installed plugins
+copilot plugin update conference-book-of-news   # Update to latest version
+copilot plugin uninstall conference-book-of-news # Remove plugin
 ```
+
+> 💡 **VS Code users:** The `/plugin install` command also works inside Copilot Chat interactive sessions.
+
+Using a different platform? See [Platform-Specific Installation](#-other-platforms) below.
+
+---
+
+## 🧪 Step 4 — Use the Plugin
+
+After installing, just interact with your AI agent naturally. Use the **trigger phrases** listed in the plugin's YAML frontmatter. For `conference-book-of-news`, try:
+
+> "Generate a book of news for Microsoft Build 2025"
+
+The agent will follow the recipes defined in `SKILL.md` — scraping sessions, capturing screenshots, extracting slides via OCR, and producing a formatted PDF.
+
+---
+
+## 📦 Other Platforms
+
+The `copilot plugin install` command is the recommended method for GitHub Copilot users. For other platforms, install plugins manually:
+
+### Squad (GitHub Copilot Squad)
+
+Squad agents auto-discover skills from `.squad/skills/`:
+
+```bash
+# Copy the entire plugin folder into your Squad repo
+cp -r plugins/conference-book-of-news /path/to/your/repo/.squad/skills/
+```
+
+That's it — Squad agents will pick up the skill on their next run.
 
 ### Claude (Projects)
 
@@ -96,16 +108,16 @@ cp plugins/conference-book-of-news/SKILL.md .copilot/skills/conference-book-of-n
 2. In **Configure** → **Knowledge**, upload the `SKILL.md` file
 3. The GPT will use this knowledge when relevant triggers match
 
-### Squad (GitHub Copilot Squad)
+### Manual Copy (any Copilot project)
 
-Squad agents auto-discover skills from `.squad/skills/`:
+If you prefer to vendor the skill directly into a repo instead of using the plugin system:
 
 ```bash
-# Copy the entire plugin folder into your Squad repo
-cp -r plugins/conference-book-of-news /path/to/your/repo/.squad/skills/
+mkdir -p .copilot/skills/conference-book-of-news
+cp plugins/conference-book-of-news/SKILL.md .copilot/skills/conference-book-of-news/SKILL.md
 ```
 
-That's it — Squad agents will pick up the skill on their next run.
+Copilot auto-discovers skills from `.copilot/skills/` — but the plugin system is preferred since it handles updates automatically.
 
 ### Any Other Agent
 
@@ -117,16 +129,6 @@ with open("plugins/conference-book-of-news/SKILL.md") as f:
 
 agent.add_context(skill)
 ```
-
----
-
-## 🧪 Step 4 — Use the Plugin
-
-After installing, just interact with your AI agent naturally. Use the **trigger phrases** listed in the plugin's YAML frontmatter. For `conference-book-of-news`, try:
-
-> "Generate a book of news for Microsoft Build 2025"
-
-The agent will follow the recipes defined in `SKILL.md` — scraping sessions, capturing screenshots, extracting slides via OCR, and producing a formatted PDF.
 
 ---
 
@@ -144,3 +146,4 @@ The agent will follow the recipes defined in `SKILL.md` — scraping sessions, c
 - **One plugin at a time.** Install and test one skill before adding more — too many instructions can dilute agent focus.
 - **Check the README.** Each plugin has a human-readable `README.md` alongside `SKILL.md` with extra context, known limitations, and examples.
 - **Triggers matter.** Use the exact trigger phrases from the YAML frontmatter for the most reliable activation.
+- **Keep plugins updated.** Run `copilot plugin update PLUGIN-NAME` periodically to pull the latest version from the marketplace.

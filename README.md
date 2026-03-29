@@ -48,39 +48,47 @@ Each plugin is a self-contained `SKILL.md` — structured markdown that any AI a
 
 ## 🚀 Installation
 
-Every plugin's core is a single file: **`SKILL.md`**. How you feed it to your AI agent depends on the platform.
+Every plugin's core is a single file: **`SKILL.md`**. The fastest way to install plugins is with the **Copilot CLI plugin system**.
 
-### GitHub Copilot (CLI & VS Code)
-
-Skills go in `.copilot/skills/<skill-name>/SKILL.md` in your repo. Copilot auto-discovers skills from this path.
+### GitHub Copilot (CLI & VS Code) — Recommended
 
 ```bash
-# Create the skills directory and copy the SKILL.md
-mkdir -p .copilot/skills/teams-ui-automation
-cp plugins/teams-ui-automation/SKILL.md .copilot/skills/teams-ui-automation/SKILL.md
+# One-time: register the marketplace
+copilot plugin marketplace add tamirdresher/squad-skills
+
+# Install any plugin
+copilot plugin install teams-ui-automation@squad-skills
+
+# Or install directly from the repo (no marketplace registration needed)
+copilot plugin install tamirdresher/squad-skills:plugins/teams-ui-automation
 ```
 
-### Claude Projects
+Plugins are installed to `~/.copilot/state/installed-plugins/` and activate automatically. Manage them with:
 
-1. Open your Claude Project settings
-2. Go to **Project Knowledge**
-3. Paste the contents of `SKILL.md` as a knowledge document
-4. Claude will now use this knowledge in conversations within that project
+```bash
+copilot plugin list                    # View installed plugins
+copilot plugin update PLUGIN-NAME      # Update to latest version
+copilot plugin uninstall PLUGIN-NAME   # Remove plugin
+```
+
+> 💡 In VS Code Copilot Chat, `/plugin install` works in interactive sessions too.
 
 ### Squad (GitHub Copilot Squad)
 
 ```bash
-# Copy the entire plugin folder
+# Copy the entire plugin folder — Squad agents auto-discover from .squad/skills/
 cp -r plugins/teams-ui-automation /path/to/your/repo/.squad/skills/
-
-# Squad agents auto-discover skills from .squad/skills/
 ```
+
+### Claude Projects
+
+1. Open your Claude Project settings → **Project Knowledge**
+2. Paste the contents of `SKILL.md` as a knowledge document
 
 ### ChatGPT / Custom GPTs
 
 1. Go to **Configure** → **Knowledge**
 2. Upload the `SKILL.md` file
-3. The GPT will reference this knowledge when relevant triggers match
 
 ### Any Other Agent
 
