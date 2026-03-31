@@ -1,6 +1,6 @@
 ---
 name: conference-book-of-news
-description: Automatically create a comprehensive "Book of News" PDF from any conference — scrapes sessions, captures video screenshots, extracts slide content via OCR, generates AI summaries, and produces an Ignite-style publication with images, announcements, code samples, and indexes.
+description: Automatically create a comprehensive "Book of News" PDF from any conference — scrapes sessions, captures video screenshots, extracts transcripts (VTT) and slide content via OCR, generates AI digests with fact-checking, and produces an Ignite-style publication with images, announcements, code samples, and indexes.
 confidence: high
 ---
 
@@ -8,7 +8,10 @@ confidence: high
 
 ## Overview
 
-This skill enables AI agents (or Squad teams) to automatically generate a comprehensive "Book of News" PDF from any conference with recorded sessions. The agent navigates the conference website, discovers all sessions with video recordings, captures screenshots at key moments during each video, extracts slide content via OCR, generates AI summaries, and assembles everything into a publication-grade PDF document.
+This skill enables AI agents (or Squad teams) to automatically generate a comprehensive "Book of News" PDF from any conference with recorded sessions. The agent navigates the conference website, discovers all sessions with video recordings, captures screenshots at key moments during each video, extracts real VTT transcripts from video embeds, generates AI digests with mandatory fact-checking, and assembles everything into a publication-grade PDF document.
+
+> **Learned from:** MVP Summit 2026 Book of News (March 2026, 20+ iterations, 104 sessions)
+> **Key insight:** Real VTT transcripts produce FAR superior content compared to OCR-only extraction. The transcript-based pipeline is the recommended approach.
 
 The output is a professional, Ignite-style publication featuring: a cover page, executive summary, table of contents organized by category, detailed per-session pages (with hero images, screenshot grids, OCR-extracted topics, AI-generated summaries, product announcements, code/demo galleries, and key takeaways), and comprehensive appendices (Top 10 Highlights, Technology Index, Speaker Directory). The entire document is self-contained with embedded images, making it easy to distribute and archive.
 
@@ -53,6 +56,10 @@ The output is a professional, Ignite-style publication featuring: a cover page, 
 ---
 
 ## Pipeline Steps
+
+> **Full pipeline:** Session Discovery → Screenshot Capture → **Transcript Extraction** → OCR (fallback) → **AI Digest Writing** → **Fact-Checking** → HTML Generation → **PDF via Edge Headless** → **Email Delivery**
+>
+> Steps in **bold** are new or significantly updated from the original OCR-only pipeline.
 
 ### Step 1: Session Discovery
 
@@ -134,9 +141,70 @@ The output is a professional, Ignite-style publication featuring: a cover page, 
 
 ---
 
-### Step 3: OCR Extraction
+### Step 2.5: Transcript Extraction (VTT → Markdown)
 
-**Goal:** Extract all text from screenshots using OCR, filtering out UI noise.
+> **⚠️ CRITICAL LESSON:** Real VTT transcripts produce FAR better digests than OCR-only extraction. OCR summaries read like "silence your phones" boilerplate; transcript-based digests capture actual speaker insights. **Always prefer transcripts when available.**
+
+**Goal:** Extract VTT caption files from video embeds and convert to usable Markdown transcripts.
+
+#### Method: Direct VTT Download from Medius
+
+1. **Navigate Playwright to the video embed URL** (from catalog `videoUrl` field)
+2. **Extract the `captionsConfiguration` from inline `<script>` tags:**
+   ```javascript
+   // In Playwright run-code:
+   const scripts = Array.from(document.querySelectorAll('script')).map(s => s.textContent).join('');
+   const m = scripts.match(/"src"\s*:\s*"(https:\/\/mediusdl\.event\.microsoft\.com\/video-\d+\/Caption_en-US\.vtt[^"]*)"/);
+   // Decode unicode escapes
+   const url = JSON.parse('"' + m[1] + '"');
+   return url;
+   ```
+
+3. **⚠️ URL ENCODING BUG:** The extracted URL contains `\u0026` (JavaScript unicode escape for `&`). You **must** decode these before using with `Invoke-WebRequest` or `curl`. Use `JSON.parse('"' + rawUrl + '"')` in the browser eval, or `.Replace('\\u0026', '&')` in PowerShell. Failing to decode produces 403 errors from the CDN.
+
+4. **Download the VTT file.** URLs have long-lived SAS tokens (expire years out):
+   ```powershell
+   $vttUrl = $decodedUrl  # After \u0026 → & decoding
+   Invoke-WebRequest -Uri $vttUrl -OutFile "$transcriptsDir/$sessionCode-transcript.vtt"
+   ```
+
+5. **⚠️ NUMERIC vs GUID IDs:** Video embed URLs use GUID IDs (`video-aes/{GUID}`), but the actual VTT download URLs use numeric IDs (`video-{NUMBER}`). The numeric ID is **only** available from the `captionsConfiguration` in the page scripts — you cannot construct it from the GUID. These are completely different identifiers.
+
+#### VTT to Markdown Conversion
+
+```powershell
+# Parse VTT blocks: timestamp line + text lines, separated by blank lines
+# Strip WEBVTT header, timing metadata, and position tags
+# Output format: **[HH:MM:SS.mmm]** Spoken text here
+
+$vttContent = Get-Content "$sessionCode-transcript.vtt" -Raw
+$blocks = $vttContent -split '\r?\n\r?\n'
+$markdown = foreach ($block in $blocks) {
+    $lines = $block -split '\r?\n' | Where-Object { $_ -and $_ -notmatch '^WEBVTT' -and $_ -notmatch '^\d+$' }
+    $timestamp = ($lines | Where-Object { $_ -match '\d{2}:\d{2}:\d{2}' }) | Select-Object -First 1
+    $text = ($lines | Where-Object { $_ -notmatch '\d{2}:\d{2}:\d{2}' }) -join ' '
+    if ($timestamp -and $text) {
+        $ts = ($timestamp -split ' --> ')[0]
+        "**[$ts]** $text"
+    }
+}
+$markdown -join "`n" | Set-Content "$sessionCode-transcript.md"
+```
+
+Typical transcript size: 40-100 KB per session (30-60 minute talks).
+
+#### Cross-Machine Transcript Collection
+
+- Multiple machines can extract transcripts in parallel (different session batches)
+- Use git to synchronize: each machine commits to `conference-name/transcripts/{CODE}-transcript.md`
+- Pull before starting, push after each batch
+- **⚠️ ~7% TRANSCRIPT-SESSION MISMATCH RISK:** When multiple machines process sessions, some video recordings may be mapped to wrong session codes (conference portal metadata errors). **Always verify** transcript content matches session title by checking the first few spoken lines against the session title/abstract. If the transcript talks about a completely different topic, flag it immediately.
+
+---
+
+### Step 3: OCR Extraction (Fallback)
+
+**Goal:** Extract all text from screenshots using OCR, filtering out UI noise. **Use as fallback** when VTT transcripts are not available (Step 2.5). When transcripts ARE available, OCR is still useful for extracting slide headings and visual content not captured in spoken words.
 
 **Process:**
 1. **Run RapidOCR** on every screenshot:
@@ -177,17 +245,38 @@ The output is a professional, Ignite-style publication featuring: a cover page, 
 
 ---
 
-### Step 4: AI Summary Generation
+### Step 4: AI Digest Writing
 
-**Goal:** Generate comprehensive summaries and key takeaways for every session.
+**Goal:** Generate comprehensive, accurate digests for every session. When transcripts are available (Step 2.5), use those as the primary source — they produce dramatically better content than OCR alone.
 
 **Process:**
 1. **Prepare context** for each session:
    - Session title, speakers, description
-   - OCR text from all 7 screenshots
+   - **Transcript** (preferred, from Step 2.5) OR OCR text (fallback, from Step 3)
    - Video URL (for reference)
 
 2. **Generate via background agent or LLM API:**
+
+   **When using transcripts (recommended):**
+   ```
+   Write a digest for this conference session based on the transcript.
+
+   Title: {title}
+   Speakers: {speakers}
+
+   Transcript:
+   {transcript_text}
+
+   Rules:
+   - ONLY use information from the transcript — ZERO fabrication
+   - Focus on PRODUCT, TECHNOLOGY, ROADMAP — not speaker personality, jokes, or session logistics
+   - No canned phrases: ban "The team explored", "deep dive into", "exciting developments", "cutting-edge"
+   - Q&A: Write the GIST (2-3 sentences per notable exchange), not raw transcript lines
+   - Demos: 2-3 sentence descriptions of what was shown and what it demonstrates
+   - Target: 300-600 words
+   ```
+
+   **When using OCR (fallback):**
    ```python
    # Example prompt:
    """
@@ -208,7 +297,41 @@ The output is a professional, Ignite-style publication featuring: a cover page, 
    """
    ```
 
-3. **Save as importable Python module** (`summaries.py`):
+#### Digest Quality Rules (CRITICAL)
+
+These rules were learned from 20+ iterations of the MVP Summit 2026 book:
+
+| Rule | Why | Bad Example | Good Example |
+|------|-----|-------------|--------------|
+| **ONLY use transcript information** | LLMs hallucinate plausible-sounding features | "Azure AI now supports 47 languages" (not in transcript) | "The speaker mentioned multi-language support is coming" |
+| **Focus on product/tech/roadmap** | Readers want actionable info, not atmosphere | "John cracked a joke about deployment" | "New deployment API supports blue-green patterns" |
+| **Ban canned phrases** | They appear 300 times across 100 digests | "The team explored exciting developments in AI" | "The Azure AI team announced three new model endpoints" |
+| **Q&A: gist only** | Raw transcript is unreadable | "Q: Can you explain... A: Well, so basically..." | "An attendee asked about pricing; the PM confirmed free tier remains unchanged" |
+| **Demos: describe what + why** | Screenshots show the demo; text should explain it | "A demo was shown" | "The speaker demonstrated live debugging a containerized app in VS Code, proving the remote attach workflow" |
+| **300-600 words** | Too short = useless; too long = unread | 50 words or 2000 words | 400 words covering key announcements and technical details |
+
+#### Digest Format
+
+```markdown
+# {CODE}: {Title}
+
+## Key Announcements
+- Bullet points of major product/roadmap announcements
+
+## Technical Details
+Paragraphs covering the technical content presented
+
+## Demos & Code
+Description of each demo (what was shown, what it proves)
+
+## Q&A Highlights
+Key audience questions and answers (gist form)
+
+## Roadmap & Timeline
+Future plans, dates, milestones mentioned
+```
+
+3. **Save as importable Python module** (`summaries.py`) or individual digest files:
    ```python
    ALL_SUMMARIES = {
        0: {
@@ -230,16 +353,75 @@ The output is a professional, Ignite-style publication featuring: a cover page, 
    }
    ```
 
+   Or save individual digest files to `conference-name/digests/{CODE}-digest.md` for easier review and fact-checking (Step 4.5).
+
 4. **Batch processing:**
-   - Use background agent with Python REPL to generate all summaries
+   - Launch parallel batches (7-15 sessions per batch) with background agents
    - Write results incrementally (session-by-session) to avoid loss
    - Typical time: 30-60 seconds per session (depending on LLM)
+
+---
+
+### Step 4.5: Fact-Checking (Q Verification)
+
+> **⚠️ MANDATORY STEP:** Do NOT skip this. Without fact-checking, ~5-10% of AI digests will contain fabricated claims that erode reader trust in the entire book.
+
+**Goal:** Verify every digest against its source transcript before inclusion in the book.
+
+**Verification Protocol:**
+1. Read the digest
+2. Read the source transcript (search for key claims)
+3. Verify every factual claim appears in the transcript
+4. **Check the digest topic matches the SESSION TITLE** — this catches transcript-session mismatches (see Step 2.5 warning about ~7% mismatch risk)
+5. Flag fabrications, hallucinations, or unsupported claims
+
+**Common Fabrication Patterns to Watch For:**
+
+| Pattern | Example | How to Detect |
+|---------|---------|---------------|
+| **Invented technical terms** | "Azure Quantum Mesh" (doesn't exist) | Search transcript for exact term |
+| **Specific numbers not in transcript** | "supports 47 languages" | Search for numbers in transcript |
+| **Plausible feature names** | "Copilot Pro Max" | Verify exact product name in transcript |
+| **Inverted meaning** | "pricing will increase" (speaker said decrease) | Re-read relevant transcript section |
+| **Conflated sessions** | Details from Session A appearing in Session B's digest | Topic should match session title |
+
+**Output:** A verification report (`Q-VERIFICATION.md`) documenting:
+- Sessions checked ✅/❌
+- Claims verified vs flagged
+- Corrections made
+- Transcript-session mismatches caught
 
 ---
 
 ### Step 5: HTML Generation
 
 **Goal:** Build a rich, self-contained HTML document with all content and embedded images.
+
+#### ⚠️ Screenshot Matching (CRITICAL)
+
+Screenshot filenames use INDEX numbers (e.g., `000-keynote-future-of-ai-07m30s.png`) that do **NOT** correspond to session catalog ordering. The index reflects the order screenshots were captured, which depends on processing order, not catalog order.
+
+**Solution:** Match screenshots to sessions using fuzzy title-slug matching:
+```python
+from difflib import SequenceMatcher
+
+def match_screenshot_to_session(screenshot_filename, sessions):
+    """Match by title slug, NOT by index number."""
+    # Extract title slug from filename: {INDEX}-{title-slug}-{timestamp}.png
+    parts = screenshot_filename.split('-', 1)  # Split off index
+    slug_part = '-'.join(parts[1:]).rsplit('-', 1)[0]  # Remove timestamp
+    
+    best_match = None
+    best_ratio = 0
+    for session in sessions:
+        session_slug = slugify(session['title'])
+        ratio = SequenceMatcher(None, slug_part.lower(), session_slug.lower()).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_match = session
+    
+    return best_match if best_ratio > 0.5 else None
+```
 
 **Key Components:**
 
@@ -444,8 +626,46 @@ PRODUCT_FAMILIES = [
 
 **Goal:** Convert the HTML document to a high-quality PDF.
 
-**Process:**
+> **⚠️ CRITICAL: Playwright/Chromium `page.pdf()` STRIPS base64 images.** All inline base64 data URIs produce empty placeholders in the output PDF. This is a known Chromium limitation with no workaround in Playwright.
 
+#### ❌ Do NOT use Playwright PDF (broken for base64 images):
+```
+# This produces a PDF with ALL images missing:
+playwright-cli navigate http://localhost:8000/book-of-news.html
+playwright-cli pdf --filename=book-of-news.pdf
+# Result: 100+ empty image placeholders
+```
+
+#### ✅ Solution: Use Microsoft Edge Headless `--print-to-pdf`
+
+Edge's headless mode preserves base64 inline images correctly:
+
+```powershell
+$htmlPath = "C:\path\to\book-of-news.html"
+$pdfPath = "C:\path\to\book-of-news.pdf"
+
+# Convert forward slashes for file:// URI
+$htmlUri = $htmlPath.Replace('\', '/')
+
+& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+    --headless --disable-gpu --no-sandbox `
+    --print-to-pdf="$pdfPath" --print-to-pdf-no-header `
+    "file:///$htmlUri"
+```
+
+**Key flags:**
+- `--headless`: Run without UI
+- `--disable-gpu`: Avoid GPU issues in headless mode
+- `--no-sandbox`: Required for some CI environments
+- `--print-to-pdf-no-header`: Remove Edge's default header/footer (date, URL, page numbers)
+
+**Expected results:** Typically 15-20 MB for 100+ sessions with HD images (much smaller than the source HTML because Edge re-compresses images during PDF creation).
+
+#### Fallback: Playwright PDF (for simple HTML without base64)
+
+The original Playwright approach still works for HTML that uses **external** image files (not base64 inline):
+
+**Process:**
 1. **Start local HTTP server:**
    ```bash
    cd output_directory
@@ -458,27 +678,50 @@ PRODUCT_FAMILIES = [
    ```
 
 3. **Wait for images to load:**
-   - Base64 images load instantly, but browser needs time to decode/render
    - Wait 5-10 seconds or use `playwright-cli wait` for specific element
 
 4. **Generate PDF:**
    ```
    playwright-cli pdf --filename=book-of-news.pdf
    ```
-   - Default: Letter size, portrait orientation
-   - For better layout: Consider landscape for image grids
-   - Print backgrounds: Enabled by default (needed for styled sections)
 
 5. **Verify output:**
    - Open PDF in viewer
-   - Zoom to 200% and check image sharpness
+   - **Zoom to 200% and check images are visible (not empty placeholders)**
    - Verify all links are clickable
    - Check TOC page numbers (if using CSS page breaks)
 
 **PDF optimization:**
-- File size: 50-200MB typical (for 100-200 sessions)
+- File size: 15-200MB typical (for 100-200 sessions)
 - Alternative: Use external image files instead of base64, but requires bundling
 - Alternative: Compress images more aggressively (quality 70), trade-off with readability
+
+---
+
+### Step 7: Email Delivery
+
+**Goal:** Deliver the final book to stakeholders.
+
+#### ✅ Outlook COM (Reliable for Large Attachments)
+
+Outlook COM automation is more reliable than Mail MCP tools for sending large attachments (15-20MB PDFs):
+
+```powershell
+$outlook = New-Object -ComObject Outlook.Application
+$mail = $outlook.CreateItem(0)
+$mail.To = "recipient@example.com"
+$mail.Subject = "Conference Book of News"
+$mail.Body = "Attached: Book of News PDF and HTML versions"
+$mail.Attachments.Add("C:\path\to\book-of-news.pdf") | Out-Null
+$mail.Attachments.Add("C:\path\to\book-of-news.html") | Out-Null
+$mail.Send()
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($outlook) | Out-Null
+```
+
+**Always send BOTH PDF and HTML:**
+- PDF is the primary deliverable (offline reading, printing)
+- HTML is the backup — renders perfectly in any browser when PDF has rendering issues
+- HTML allows readers to click through to session videos
 
 ---
 
@@ -743,11 +986,59 @@ Real lessons from the MVP Summit 2026 implementation:
 - **Solution:** Refresh auth token periodically (every 30 mins), or re-login
 - **Best practice:** Use dedicated service account with long-lived tokens for automation
 
+### **12. Transcript-session mismatch (~7% error rate)**
+- **Problem:** When extracting transcripts across multiple machines, ~7% of recordings may be mapped to the wrong session code due to conference portal metadata errors
+- **Solution:** Always verify the first few spoken lines of each transcript against the session title. If the transcript discusses a completely different topic, flag and reassign
+- **Detection:** During fact-checking (Step 4.5), check that digest topic matches session title
+- **Impact:** Without verification, the wrong content appears under a session, destroying reader trust
+
+### **13. OCR summaries are garbage compared to transcript-based digests**
+- **Problem:** OCR-only summaries read like slide header lists ("AI Overview", "Architecture Diagram") with no actual content
+- **Solution:** Real VTT transcripts capture what the speaker actually said — product names, roadmap dates, technical details, Q&A. Always prefer transcript-based digests.
+- **Quality comparison:** OCR-based = "The speaker discussed Azure AI" → Transcript-based = "Azure AI Studio now supports fine-tuning GPT-4o models with custom datasets, available in East US 2 by Q3 2026"
+
+### **14. Playwright PDF strips base64 images**
+- **Problem:** Chromium's `page.pdf()` aggressively re-compresses or removes inline base64 data URIs — all images show as empty placeholders
+- **Solution:** Use Edge headless `--print-to-pdf` which correctly preserves inline images (see Step 6)
+- **Detection:** If your PDF has blank white rectangles where images should be, this is the cause
+
+### **15. Screenshot index numbers don't match session catalog order**
+- **Problem:** Screenshot filenames like `042-session-title-07m30s.png` use an index that reflects capture order, not the session's position in the catalog
+- **Solution:** Match screenshots to sessions via fuzzy title-slug matching using `difflib.SequenceMatcher`, never by index
+- **Threshold:** Require >0.5 similarity ratio to avoid false matches
+
+### **16. Outlook COM is more reliable than Mail MCP for large attachments**
+- **Problem:** Mail MCP tools can fail silently or timeout when attaching 15-20MB PDF files
+- **Solution:** Use Outlook COM automation (`New-Object -ComObject Outlook.Application`) which handles large attachments reliably
+- **Bonus:** Always send both HTML + PDF — HTML renders perfectly in browsers as backup when PDF viewers have issues
+
+### **17. Canned phrases proliferate without explicit banning**
+- **Problem:** Without explicit instructions, LLMs produce "The team explored exciting developments in..." for every single digest. With 100+ sessions, the phrase appears 300+ times.
+- **Solution:** Explicitly ban specific phrases in the digest writing prompt (see Step 4 quality rules)
+- **Watch list:** "The team explored", "deep dive into", "exciting developments", "cutting-edge", "game-changing"
+
+### **18. Skipping fact-checking erodes trust in the entire book**
+- **Problem:** Without Q verification (Step 4.5), ~5-10% of digests contain fabricated claims (invented product names, wrong numbers, inverted meanings). A single reader catching one fabrication discredits the whole publication.
+- **Solution:** Q must verify every digest against its source transcript before inclusion. No exceptions.
+- **Common catches:** Specific percentages not in transcript, product names that sound plausible but weren't mentioned, saying "pricing will increase" when speaker said "decrease"
+
 ---
 
 ## Output Quality Checklist
 
 Use this checklist to verify the generated Book of News meets quality standards:
+
+### **Transcripts & Digests (from Steps 2.5, 4, 4.5):**
+- [ ] Transcripts extracted for all sessions with video recordings
+- [ ] First spoken lines of each transcript match session title (no mismatches)
+- [ ] Every digest verified by Q against source transcript (Step 4.5)
+- [ ] No fabricated claims (invented terms, unsupported numbers, inverted meanings)
+- [ ] Digests focus on product/tech/roadmap — not speaker personality or jokes
+- [ ] No canned phrases: "The team explored", "deep dive into", "exciting developments"
+- [ ] Q&A sections are gist format (2-3 sentences), not raw transcript
+- [ ] Demo descriptions are 2-3 sentences explaining what was shown and what it proves
+- [ ] Digests are 300-600 words each
+- [ ] Q-VERIFICATION.md report is complete
 
 ### **Session Pages:**
 - [ ] All sessions have 7 screenshots (1 hero + 6 grid)
@@ -796,13 +1087,14 @@ Use this checklist to verify the generated Book of News meets quality standards:
 - [ ] Speaker Directory links to their sessions
 
 ### **PDF Output:**
-- [ ] File size is reasonable (80-200MB for 100-200 sessions with HD images)
-- [ ] All images render correctly (no broken images)
-- [ ] Large HTML (100+ MB) loaded with extended timeout (300s)
+- [ ] **Generated with Edge headless, NOT Playwright** (Playwright strips base64 images)
+- [ ] All images render correctly (no empty placeholders)
+- [ ] File size is reasonable (15-20MB for 100+ sessions with Edge; larger with external images)
 - [ ] Links are clickable in PDF viewer
 - [ ] Text is selectable (not rasterized)
 - [ ] Page breaks are clean (no orphaned headings)
 - [ ] TOC page numbers are accurate (if using CSS page numbers)
+- [ ] Both PDF and HTML versions delivered (HTML as backup)
 
 ### **Final Validation:**
 - [ ] Spot-check 10 random sessions for accuracy
@@ -834,22 +1126,32 @@ for session in sessions.json:
     playwright-cli click e5  # play button
     # ... seek to 7 timestamps, screenshot each
 
-# 4. Run OCR on all screenshots
+# 3.5. Extract transcripts (VTT) from video embeds
+for session in sessions.json:
+    playwright-cli navigate {video_embed_url}
+    # Extract captionsConfiguration → VTT URL (decode \u0026!)
+    # Download VTT → convert to Markdown
+    # Verify first spoken lines match session title
+
+# 4. Run OCR on all screenshots (for slide headings, fallback content)
 python ocr_extract.py --input screenshots/ --output ocr-extracts.json
 
-# 5. Generate AI summaries
-# (use background agent with Python REPL)
-# ... write to summaries.py
+# 5. Generate AI digests from transcripts (preferred) or OCR (fallback)
+# Launch parallel batches with background agents
+# Apply quality rules: no canned phrases, product/tech focus, 300-600 words
 
-# 6. Build HTML document
-python build_book.py --sessions sessions.json --ocr ocr-extracts.json --summaries summaries.py --output book-of-news.html
+# 5.5. Fact-check every digest against source transcript
+# Q verifies: claims match transcript, topic matches session title
+# Flag fabrications, hallucinations, inverted meanings
 
-# 7. Convert to PDF
-python -m http.server 8000 &
-playwright-cli navigate http://localhost:8000/book-of-news.html
-playwright-cli pdf --filename ignite-2026-book-of-news.pdf
+# 6. Build HTML document (match screenshots by fuzzy title slug, NOT index)
+python build_book.py --sessions sessions.json --transcripts transcripts/ --digests digests/ --output book-of-news.html
 
-# 8. Verify output
+# 7. Convert to PDF using Edge headless (NOT Playwright — it strips base64 images!)
+msedge.exe --headless --disable-gpu --no-sandbox --print-to-pdf="book.pdf" --print-to-pdf-no-header "file:///path/to/book-of-news.html"
+
+# 8. Deliver via Outlook COM (both PDF + HTML)
+# Always send HTML as backup — it renders perfectly in browsers
 open ignite-2026-book-of-news.pdf
 # (check quality with checklist above)
 ```
@@ -893,6 +1195,74 @@ open ignite-2026-book-of-news.pdf
 - **Solution:** Refresh auth every 30 minutes, or use long-lived service account
 - **Check:** Monitor for 401 responses in Playwright logs
 
+### **Problem: VTT URL returns 403 Forbidden**
+- **Cause:** `\u0026` unicode escapes not decoded — the `&` characters in SAS token parameters are mangled
+- **Solution:** Decode unicode escapes: `JSON.parse('"' + rawUrl + '"')` in browser, or `.Replace('\\u0026', '&')` in PowerShell
+- **Check:** Print the URL and verify `&` characters appear correctly (not as `\u0026`)
+
+### **Problem: PDF has empty white rectangles instead of images**
+- **Cause:** Using Playwright `page.pdf()` which strips base64 data URIs
+- **Solution:** Use Edge headless `--print-to-pdf` instead (see Step 6)
+- **Check:** Open the HTML directly in a browser — if images appear there but not in PDF, this is the cause
+
+### **Problem: Wrong images matched to sessions**
+- **Cause:** Matching screenshots by filename INDEX number instead of title slug
+- **Solution:** Use fuzzy title-slug matching with `difflib.SequenceMatcher` (see Step 5)
+- **Check:** Verify hero image visually matches session topic for a random sample
+
+### **Problem: Digest topic doesn't match session title**
+- **Cause:** Transcript-session mismatch (~7% error rate from cross-machine extraction)
+- **Solution:** During fact-checking (Step 4.5), verify the first spoken lines of each transcript match the session title. Reassign mismatched transcripts.
+- **Check:** Read the first 2-3 lines of the transcript — do they mention the session's topic?
+
+### **Problem: Every digest says "The team explored exciting developments"**
+- **Cause:** LLM defaulting to canned transition phrases without explicit ban
+- **Solution:** Add explicit phrase bans to the digest writing prompt (see Step 4 quality rules)
+- **Check:** Search output for banned phrases: `grep -c "team explored\|deep dive\|exciting" digests/*.md`
+
+---
+
+## Recommended File Structure
+
+```
+conference-name/
+├── sessions.json                      # Session catalog (Step 1)
+├── sessions-to-process.json           # Session codes + portal URLs
+├── transcripts/
+│   └── {CODE}-transcript.md           # VTT→Markdown transcripts (Step 2.5)
+├── screenshots/
+│   ├── deep-analysis/*.png            # Session screenshots (Step 2)
+│   └── all-sessions-results.json      # Session catalog (alternate)
+├── ocr-extracts.json                  # OCR output (Step 3)
+├── digests/
+│   └── {CODE}-digest.md               # AI-written session digests (Step 4)
+├── summaries.py                       # Importable summaries module (Step 4 alt)
+├── build_v2.py                        # HTML assembly script (Step 5)
+├── Book-FINAL.html                    # Output HTML (Step 5)
+├── Book-FINAL-HD.pdf                  # Output PDF — Edge-generated (Step 6)
+└── Q-VERIFICATION.md                  # Q's fact-check report (Step 4.5)
+```
+
+---
+
+## Production Metrics (MVP Summit 2026 Reference)
+
+These numbers are from the actual MVP Summit 2026 production run (March 2026):
+
+| Metric | Value |
+|--------|-------|
+| Sessions processed | 104 (of 136 total; 4 had no recordings) |
+| Transcripts extracted | 105 (40-100 KB each) |
+| AI digests written | 104 (300-600 words each, 252 KB total) |
+| Screenshots captured | 755 (7 per session) |
+| Images embedded in book | 412 |
+| Screenshot match rate | 99% (fuzzy title matching) |
+| Final HTML size | ~22 MB |
+| Final PDF size | ~18.5 MB |
+| Q verification | ~160 claims checked, 2 critical issues caught and fixed |
+| Transcript-session mismatches | ~7% (caught during fact-checking) |
+| Total iterations | 20+ over one day |
+
 ---
 
 ## Extensions & Future Work
@@ -903,9 +1273,10 @@ open ignite-2026-book-of-news.pdf
    - Detect conference language, use appropriate OCR model
    - Translate summaries to multiple languages
 
-2. **Video transcript integration:**
-   - Use conference-provided transcripts (if available)
-   - Run speech-to-text on videos for more accurate content
+2. **~~Video transcript integration~~ ✅ DONE (Step 2.5):**
+   - VTT transcript extraction from Medius video embeds is now a core pipeline step
+   - Produces dramatically better digests than OCR-only approach
+   - **Remaining:** Speech-to-text fallback for platforms without VTT captions
 
 3. **Interactive HTML version:**
    - Keep HTML as browsable website (not just PDF source)
