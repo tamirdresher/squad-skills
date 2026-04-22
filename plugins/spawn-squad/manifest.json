@@ -1,0 +1,20 @@
+{
+  "name": "spawn-squad",
+  "version": "1.0.0",
+  "description": "Teach an HQ agent to create, run, and manage child squads for specific missions",
+  "platforms": ["copilot", "squad"],
+  "triggers": [
+    "spawn squad", "create squad", "child squad", "fan out",
+    "spawn team", "create child team", "mission squad",
+    "parallel squads", "squad factory"
+  ],
+  "author": "Tamir Dresher",
+  "license": "MIT",
+  "files": {
+    "skill": "SKILL.md"
+  },
+  "requirements": {
+    "cli": ["copilot", "squad", "git"],
+    "note": "Requires GitHub Copilot CLI with Squad agent and Squad CLI installed"
+  }
+}
