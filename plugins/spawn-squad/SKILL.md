@@ -157,9 +157,11 @@ git add -A && git commit -m "squad: configure team for mission ${MISSION_ID}"
 
 Use the Copilot CLI to run sessions against the child squad.
 
+> **`--yolo` flag:** Non-interactive spawning requires `--yolo` to auto-approve file operations. Without it, Copilot CLI blocks on permission prompts that no one is there to click.
+
 **Single-turn mission:**
 ```bash
-copilot --agent squad \
+copilot --agent squad --yolo \
   -p "Execute the mission described in .squad/mission.md. Follow the success criteria exactly." \
   2>&1 | tee evidence/session-run.log
 ```
@@ -169,17 +171,17 @@ copilot --agent squad \
 mkdir -p evidence
 
 # Phase 1: Analysis
-copilot --agent squad \
+copilot --agent squad --yolo \
   -p "Phase 1: Analyze the codebase and create a migration plan in .squad/decisions/migration-plan.md" \
   2>&1 | tee evidence/session-phase1.log
 
 # Phase 2: Implementation  
-copilot --agent squad \
+copilot --agent squad --yolo \
   -p "Phase 2: Execute the migration plan from .squad/decisions/migration-plan.md" \
   2>&1 | tee evidence/session-phase2.log
 
 # Phase 3: Verification
-copilot --agent squad \
+copilot --agent squad --yolo \
   -p "Phase 3: Run tests and verify all success criteria from .squad/mission.md are met" \
   2>&1 | tee evidence/session-phase3.log
 ```
@@ -269,7 +271,7 @@ To run multiple child squads simultaneously:
 for MISSION in auth-migration data-layer api-gateway; do
   (
     cd /tmp/squad-mission-${MISSION}
-    copilot --agent squad \
+    copilot --agent squad --yolo \
       -p "Execute the mission in .squad/mission.md" \
       2>&1 | tee evidence/session-run.log
   ) &
