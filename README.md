@@ -1,7 +1,7 @@
 # 🧩 Squad Skills — AI Plugin Marketplace
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Plugins](https://img.shields.io/badge/Plugins-23-green.svg)](#-available-plugins)
+[![Plugins](https://img.shields.io/badge/Plugins-24-green.svg)](#-available-plugins)
 [![Platform](https://img.shields.io/badge/Works%20With-Any%20AI%20Agent-purple.svg)](#-installation)
 
 **Reusable knowledge plugins for AI agents.** Think of it as *npm for AI agent skills* — structured knowledge modules that any AI system can consume to learn new capabilities.
@@ -44,6 +44,7 @@ Each plugin is a self-contained `SKILL.md` — structured markdown that any AI a
 | [📱 phone-link-2fa](plugins/phone-link-2fa/) | Extract 2FA codes from SMS via Windows Phone Link | `2fa`, `sms`, `verification code`, `otp`, `phone link` |
 | [📘 conference-book-of-news](plugins/conference-book-of-news/) | Auto-generate Ignite-style "Book of News" PDF from any conference — scrapes videos, captures screenshots, OCR extracts slides, AI summarizes sessions | `conference`, `book of news`, `session recap`, `ignite`, `build`, `summit`, `video screenshots` |
 | [🚀 spawn-squad](plugins/spawn-squad/) | Teach an HQ agent to create, run, and manage child squads — fan-out pattern for parallel exploration, legacy migration, and ephemeral missions | `spawn squad`, `create squad`, `fan out`, `child squad`, `new squad`, `delegate squad`, `launch squad`, `spin up squad`, `orchestrate squads` |
+| [🤝 cross-squad-communication](plugins/cross-squad-communication/) | Protocol for querying, delegating, and sharing context across independent Squad instances in other repos | `cross squad`, `inter squad`, `squad handoff`, `delegate to squad` |
 
 ---
 
