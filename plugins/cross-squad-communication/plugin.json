@@ -1,0 +1,19 @@
+{
+  "name": "cross-squad-communication",
+  "description": "Protocol for sending queries, delegating tasks, and sharing context between independent Squad instances across different repositories",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tamir Dresher"
+  },
+  "license": "MIT",
+  "keywords": [
+    "cross squad",
+    "cross-squad",
+    "multi squad",
+    "inter squad",
+    "squad handoff",
+    "squad coordination",
+    "delegate to squad"
+  ],
+  "skills": "./"
+}
