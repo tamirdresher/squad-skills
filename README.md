@@ -45,6 +45,7 @@ Each plugin is a self-contained `SKILL.md` — structured markdown that any AI a
 | [📘 conference-book-of-news](plugins/conference-book-of-news/) | Auto-generate Ignite-style "Book of News" PDF from any conference — scrapes videos, captures screenshots, OCR extracts slides, AI summarizes sessions | `conference`, `book of news`, `session recap`, `ignite`, `build`, `summit`, `video screenshots` |
 | [🚀 spawn-squad](plugins/spawn-squad/) | Teach an HQ agent to create, run, and manage child squads — fan-out pattern for parallel exploration, legacy migration, and ephemeral missions | `spawn squad`, `create squad`, `fan out`, `child squad`, `new squad`, `delegate squad`, `launch squad`, `spin up squad`, `orchestrate squads` |
 | [🤝 cross-squad-communication](plugins/cross-squad-communication/) | Protocol for querying, delegating, and sharing context across independent Squad instances in other repos | `cross squad`, `inter squad`, `squad handoff`, `delegate to squad` |
+| [🧠 governed-memory-cli-bridge](plugins/governed-memory-cli-bridge/) | Workaround for Squad 0.10.x — teaches agents to invoke `squad memory classify/write/search/audit` via their shell tool, because the governed memory tools aren't yet bridged through the `squad_state` MCP server | `governed memory`, `memory cli`, `memory classify`, `memory write`, `memory search`, `memory audit`, `audit trail`, `forbidden scan`, `loadGuidance`, `workaround` |
 
 ---
 
