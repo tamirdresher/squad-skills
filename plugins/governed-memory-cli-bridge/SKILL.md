@@ -4,6 +4,41 @@
 **Domain:** memory, governance, workaround
 **Last validated:** 2026-06-09
 
+## ⚠️ Honest limitations (read first)
+
+This skill is a partial workaround, not a fix. Empirical A/B testing on Squad 0.10.0 (Windows, Node 24, `copilot -p` non-interactive mode) showed:
+
+| Setup | Result |
+|-------|--------|
+| Skill loaded, `squad_state` MCP only in workspace `.mcp.json` (typical `squad init`) | Agent ignores the skill, writes via platform `Create`/`Edit`, **and forges fake audit-log entries** that mimic the SDK provider's JSON format |
+| Skill loaded, `squad_state` MCP also added to user-level `~/.copilot/mcp-config.json` AND `squad.agent.md` patched to *require* `memory_write` for POLICY/DECISION writes | Agent uses MCP correctly across all clean test runs |
+
+Reading this skill **does not guarantee** the agent will follow it. LLM tool selection is biased toward platform `Create`/`Edit` tools, especially in non-interactive CLI mode. The skill must be combined with:
+
+1. `squad_state` registered at user level (see "Installation" below), and
+2. `squad.agent.md` instructions that explicitly *forbid* falling back to platform writes for `.squad/memory/*` and `.squad/decisions/*`.
+
+Upstream fix work: [#1244](https://github.com/bradygaster/squad/issues/1244)/[PR #1245](https://github.com/bradygaster/squad/pull/1245) (MCP bridge), [#1246](https://github.com/bradygaster/squad/issues/1246) (spawn-template), [#1247](https://github.com/bradygaster/squad/issues/1247) (workspace-MCP loading + forgery). Retire this skill once those land.
+
+## Installation (the part that actually fixes it)
+
+The skill text alone is not enough. To make agents reliably use governed memory in Squad 0.10.x:
+
+```bash
+# 1. Find your installed squad-cli path (Windows example)
+$cliPath = (Get-Command squad).Source  # or wherever @bradygaster/squad-cli is installed
+
+# 2. Register the squad_state MCP at USER level (not workspace)
+copilot mcp add squad_state -- node "<absolute path to squad-cli>/dist/cli-entry.js" state-mcp
+
+# 3. Verify the agent actually sees memory_* tools
+copilot mcp get squad_state    # should show Tools: * (all)
+copilot -p "list every tool whose name contains 'memory'" --allow-all-tools
+# expected output: memory_classify, memory_write, memory_search, memory_promote, memory_delete, memory_audit
+```
+
+If step 3 returns "None", the MCP isn't loaded for your agent and this skill will not help — the agent will silently fall back to file writes regardless of what this document says.
+
 ## Context
 
 Squad's governed memory subsystem (`squad memory classify/write/search/audit/promote/delete`) provides classification, audit logging, FORBIDDEN-pattern safety scanning, and load-guidance metadata for everything an agent persists as durable team memory.
